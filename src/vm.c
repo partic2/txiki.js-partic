@@ -108,6 +108,8 @@ static const JSSharedArrayBufferFunctions tjs_sf = {
 /* core */
 extern const uint8_t tjs__core[];
 extern const uint32_t tjs__core_size;
+extern const uint8_t tjs__polyfills[];
+extern const uint32_t tjs__polyfills_size;
 extern const uint8_t tjs__run_main[];
 extern const uint32_t tjs__run_main_size;
 

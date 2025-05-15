@@ -792,7 +792,7 @@ static JSValue tjs_xhr___tjsPopResponseBuffer(JSContext *ctx, JSValue this_val, 
     if (!x) {
         return JS_EXCEPTION;
     }
-    JSValue bytes=JS_NewArrayBufferCopy(ctx, x->result.bbuf->buf, x->result.bbuf.bbuf->size);
+    JSValue bytes=JS_NewArrayBufferCopy(ctx, x->result.bbuf.buf, x->result.bbuf.size);
     x->result.bbuf.size=0;
     return bytes;
 }
