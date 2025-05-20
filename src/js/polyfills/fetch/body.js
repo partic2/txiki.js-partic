@@ -104,22 +104,20 @@ export const BodyMixin = {
             throw new Error('Unknown body type');
         }
 
-        if (this._bodyReadable) {
-            const parts=[];
-            const reader=this._bodyReadable.getReader();
+        const parts=[];
+        const reader=this._bodyReadable.getReader();
 
-            for (;;) {
-                const next=await reader.read();
+        for (;;) {
+            const next=await reader.read();
 
-                if (next.done) {
-                    break;
-                }
-
-                parts.push(next.value);
+            if (next.done) {
+                break;
             }
 
-            return new Blob(parts);
+            parts.push(next.value);
         }
+
+        return new Blob(parts);
     },
 
     async arrayBuffer() {
