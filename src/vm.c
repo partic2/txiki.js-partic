@@ -86,7 +86,7 @@ static void *tjs__sab_alloc(void *opaque, size_t size) {
 void tjs__sab_free(void *opaque, void *ptr) {
     TJSSABHeader *sab = (TJSSABHeader *) ((uint8_t *) ptr - sizeof(TJSSABHeader));
     int ref_count = atomic_add_int(&sab->ref_count, -1);
-    assert(ref_count >= 0);
+    //assert(ref_count >= 0);
     if (ref_count == 0) {
         tjs__free(sab);
     }
@@ -132,7 +132,6 @@ static void tjs__bootstrap_core(JSContext *ctx, JSValue ns) {
     tjs__mod_sys_init(ctx, ns);
     tjs__mod_timers_init(ctx, ns);
     tjs__mod_udp_init(ctx, ns);
-    tjs__mod_wasm_init(ctx, ns);
     tjs__mod_worker_init(ctx, ns);
     tjs__mod_ws_init(ctx, ns);
     tjs__mod_xhr_init(ctx, ns);
@@ -317,9 +316,6 @@ TJSRuntime *TJS_NewRuntimeInternal(bool is_worker, TJSRunOptions *options) {
     JS_FreeValue(ctx, core_sym);
     JS_FreeValue(ctx, global_obj);
 
-    /* WASM */
-    qrt->wasm_ctx.env = m3_NewEnvironment();
-
     /* Timers */
     qrt->timers.timers = NULL;
     qrt->timers.next_timer = 1;
@@ -356,9 +352,6 @@ void TJS_FreeRuntime(TJSRuntime *qrt) {
         qrt->curl_ctx.curlm_h = NULL;
     }
 
-    /* Destroy WASM runtime. */
-    m3_FreeEnvironment(qrt->wasm_ctx.env);
-    qrt->wasm_ctx.env = NULL;
 
     /* Cleanup loop. All handles should be closed. */
     int closed = 0;

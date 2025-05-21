@@ -28,7 +28,6 @@
 #include "../deps/quickjs/cutils.h"
 #include "tjs.h"
 #include "utils.h"
-#include "wasm.h"
 
 #include <curl/curl.h>
 #include <quickjs.h>
@@ -55,9 +54,6 @@ struct TJSRuntime {
         CURLM *curlm_h;
         uv_timer_t timer;
     } curl_ctx;
-    struct {
-        IM3Environment env;
-    } wasm_ctx;
     struct {
         TJSTimer *timers;
         int64_t next_timer;

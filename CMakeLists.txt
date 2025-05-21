@@ -57,9 +57,6 @@ endif()
 
 add_subdirectory(deps/sqlite3 EXCLUDE_FROM_ALL)
 
-set(BUILD_WASI "simple" CACHE STRING "WASI implementation")
-add_subdirectory(deps/wasm3 EXCLUDE_FROM_ALL)
-
 
 add_subdirectory(deps/curl EXCLUDE_FROM_ALL)
 
@@ -78,7 +75,6 @@ add_library(tjs STATIC
     src/utils.c
     src/version.c
     src/vm.c
-    src/wasm.c
     src/worker.c
     src/ws.c
     src/xhr.c
@@ -133,7 +129,7 @@ if(WIN32)
 target_compile_definitions(tjs PRIVATE WIN32_LEAN_AND_MEAN)
 endif()
 target_include_directories(tjs PUBLIC src)
-target_link_libraries(tjs qjs uv_a m3 sqlite3 libcurl_static ffi_static)
+target_link_libraries(tjs qjs uv_a sqlite3 libcurl_static ffi_static)
 
 add_executable(tjs-cli
     src/cli.c
