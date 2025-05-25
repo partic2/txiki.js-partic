@@ -5,7 +5,8 @@
 
 ## Note 
 
-This is a fork for txiki.js to be enable to embedding into xplatj2(https://github.com/partic2/xplatj2). Though it can be use standalone.
+This is a fork for txiki.js to be enable to embedding into xplatj2(https://github.com/partic2/xplatj2). Though it can be use standalone. 
+To pull all dependencies, run `python deps/pull_deps.py`
 
 ## Overview
 

@@ -2,9 +2,14 @@ cmake_minimum_required(VERSION 3.14)
 
 project(tjs LANGUAGES C)
 
-if((NOT DEFINED DEPS_SOURCE_DIRS) OR (${DEPS_SOURCE_DIRS} STREQUAL ""))
-message(FATAL_ERROR "Variable DEPS_SOURCE_DIRS must be set to the root dir of project 'xplatj2' ")
+if("${DEPS_SOURCE_DIRS}" STREQUAL "")
+  if(NOT ("$ENV{DEPS_SOURCE_DIRS}" STREQUAL ""))
+    set(DEPS_SOURCE_DIRS $ENV{DEPS_SOURCE_DIRS})
+  else()
+    get_filename_component(DEPS_SOURCE_DIRS ../deps ABSOLUTE)
+  endif()
 endif()
+
 
 set(CURL_USE_MBEDTLS ON)
 
