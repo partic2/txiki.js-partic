@@ -133,7 +133,8 @@ target_compile_definitions(tjs PRIVATE TJS__PLATFORM="${TJS_PLATFORM}")
 if(WIN32)
 target_compile_definitions(tjs PRIVATE WIN32_LEAN_AND_MEAN)
 endif()
-target_include_directories(tjs PUBLIC src)
+target_include_directories(tjs PRIVATE src)
+target_include_directories(tjs PUBLIC include)
 target_link_libraries(tjs qjs uv_a sqlite3 libcurl_static ffi_static)
 
 add_executable(tjs-cli

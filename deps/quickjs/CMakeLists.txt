@@ -255,10 +255,13 @@ endif()
 
 add_library(qjs ${qjs_sources})
 target_compile_definitions(qjs PRIVATE ${qjs_defines})
-target_include_directories(qjs PUBLIC
+target_include_directories(qjs PRIVATE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
+target_include_directories(qjs PUBLIC include)
+
 target_link_libraries(qjs PUBLIC ${qjs_libs})
 
 if(EMSCRIPTEN)
@@ -413,32 +416,3 @@ if(QJS_BUILD_EXAMPLES)
     target_link_libraries(test_fib qjs)
 endif()
 
-# Install target
-#
-
-if(NOT IOS)
-    file(STRINGS quickjs.h quickjs_h REGEX QJS_VERSION)
-    string(REGEX MATCH "QJS_VERSION_MAJOR ([0-9]*)" _ "${quickjs_h}")
-    set(QJS_VERSION_MAJOR ${CMAKE_MATCH_1})
-    string(REGEX MATCH "QJS_VERSION_MINOR ([0-9]*)" _ "${quickjs_h}")
-    set(QJS_VERSION_MINOR ${CMAKE_MATCH_1})
-    string(REGEX MATCH "QJS_VERSION_PATCH ([0-9]*)" _ "${quickjs_h}")
-    set(QJS_VERSION_PATCH ${CMAKE_MATCH_1})
-    set_target_properties(qjs PROPERTIES
-        VERSION ${QJS_VERSION_MAJOR}.${QJS_VERSION_MINOR}.${QJS_VERSION_PATCH}
-        SOVERSION ${QJS_VERSION_MAJOR}
-    )
-    install(FILES quickjs.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-    if(QJS_BUILD_LIBC)
-        install(FILES quickjs-libc.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-    endif()
-    install(TARGETS qjs_exe RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(TARGETS qjsc RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-    install(TARGETS qjs EXPORT qjsConfig
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    install(EXPORT qjsConfig DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quickjs)
-    install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DOCDIR})
-    install(DIRECTORY examples DESTINATION ${CMAKE_INSTALL_DOCDIR})
-endif()

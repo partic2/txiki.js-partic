@@ -23,7 +23,7 @@
  */
 
 #include "curl-utils.h"
-#include "cutils.h"
+#include "../deps/quickjs/cutils.h"
 #include "private.h"
 #include "quickjs.h"
 
