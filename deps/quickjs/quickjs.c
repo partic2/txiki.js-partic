@@ -6750,6 +6750,8 @@ static void build_backtrace(JSContext *ctx, JSValueConst error_val,
     double d;
     int stack_trace_limit;
 
+    memset(&prepare,0,sizeof(JSValue));
+
     rt = ctx->rt;
     if (rt->in_build_stack_trace)
         return;

@@ -27,6 +27,7 @@
 #define TJS_H
 
 #include <quickjs.h>
+#include <uv.h>
 
 typedef struct TJSRuntime TJSRuntime;
 
@@ -45,5 +46,7 @@ JSContext *TJS_GetJSContext(TJSRuntime *qrt);
 TJSRuntime *TJS_GetRuntime(JSContext *ctx);
 int TJS_Run(TJSRuntime *qrt);
 void TJS_Stop(TJSRuntime *qrt);
+
+uv_loop_t *TJS_GetLoop(TJSRuntime *qrt);
 
 #endif

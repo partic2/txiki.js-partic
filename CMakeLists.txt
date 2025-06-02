@@ -116,7 +116,7 @@ add_library(sqlite-test SHARED
 
 target_link_libraries(sqlite-test sqlite3)
 
-if(NOT TARGET libffi)
+if(NOT TARGET ffi_static)
 add_subdirectory(${DEPS_SOURCE_DIRS}/libffi ./build_libffi)
 endif()
 
@@ -141,9 +141,6 @@ add_executable(tjs-cli
     src/cli.c
 )
 target_link_libraries(tjs-cli tjs)
-set_target_properties(tjs-cli
-    PROPERTIES OUTPUT_NAME tjs
-)
 
 add_executable(tjsc EXCLUDE_FROM_ALL
     src/qjsc.c
