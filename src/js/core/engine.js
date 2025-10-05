@@ -82,4 +82,18 @@ Object.defineProperty(engine, 'versions', {
     value: Object.freeze(core.versions)
 });
 
+
+core.setOnMessage((type,args)=>{
+    switch(type){
+        case 'unhandledrejection':
+            globalThis.dispatchEvent(new PromiseRejectionEvent('unhandledrejection',args[0],args[1]));
+            break;
+        case 'uncaughtException':
+            globalThis.dispatchEvent(new ErrorEvent(args));
+            break;
+    }
+});
+
+
+
 export default engine;

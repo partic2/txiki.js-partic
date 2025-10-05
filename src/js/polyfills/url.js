@@ -1,5 +1,5 @@
-import { URLPattern } from 'urlpattern-polyfill';
-import { URL, URLSearchParams } from 'whatwg-url';
+import { URLPattern } from './urlpattern-polyfill.js';
+import { URL, URLSearchParams } from './whatwg-url.js';
 
 globalThis.URL = URL;
 globalThis.URLPattern = URLPattern;

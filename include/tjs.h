@@ -44,6 +44,8 @@ void TJS_FreeRuntime(TJSRuntime *qrt);
 void TJS_Initialize(int argc, char **argv);
 JSContext *TJS_GetJSContext(TJSRuntime *qrt);
 TJSRuntime *TJS_GetRuntime(JSContext *ctx);
+//"${startup_dir}/tjs-initialize/all.js" will be imported when initializing. Or use exeDir if not set.
+void TJS_SetTjsStartupDir(const char *path);
 int TJS_Run(TJSRuntime *qrt);
 void TJS_Stop(TJSRuntime *qrt);
 

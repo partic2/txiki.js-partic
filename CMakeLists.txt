@@ -67,7 +67,6 @@ add_subdirectory(deps/curl EXCLUDE_FROM_ALL)
 
 
 add_library(tjs STATIC
-    src/builtins.c
     src/curl-utils.c
     src/curl-websocket.c
     src/error.c
@@ -85,7 +84,6 @@ add_library(tjs STATIC
     src/xhr.c
     src/mod_dns.c
     src/mod_engine.c
-    src/mod_ffi.c
     src/mod_fs.c
     src/mod_fswatch.c
     src/mod_os.c
@@ -94,11 +92,6 @@ add_library(tjs STATIC
     src/mod_streams.c
     src/mod_sys.c
     src/mod_udp.c
-    src/bundles/c/core/core.c
-    src/bundles/c/core/polyfills.c
-    src/bundles/c/core/run-main.c
-    src/bundles/c/core/run-repl.c
-    src/bundles/c/core/worker-bootstrap.c
     deps/quickjs/cutils.c
 )
 

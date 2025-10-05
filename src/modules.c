@@ -30,85 +30,21 @@
 #include <string.h>
 
 
-JSModuleDef *tjs__load_http(JSContext *ctx, const char *url) {
-    JSModuleDef *m;
-    DynBuf dbuf;
-
-    tjs_dbuf_init(ctx, &dbuf);
-
-    int r = tjs_curl_load_http(&dbuf, url);
-    if (r != 200) {
-        m = NULL;
-        if (r < 0) {
-            /* curl error */
-            JS_ThrowReferenceError(ctx, "could not load '%s': %s", url, curl_easy_strerror(-r));
-        } else {
-            /* http error */
-            JS_ThrowReferenceError(ctx, "could not load '%s': %d", url, r);
-        }
-        goto end;
-    }
-
-    /* compile the module */
-    JSValue func_val =
-        JS_Eval(ctx, (char *) dbuf.buf, dbuf.size - 1, url, JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-    if (JS_IsException(func_val)) {
-        JS_FreeValue(ctx, func_val);
-        m = NULL;
-        goto end;
-    }
-
-    /* XXX: could propagate the exception */
-    js_module_set_import_meta(ctx, func_val, false, false);
-    /* the module is already referenced, so we must free it */
-    m = JS_VALUE_GET_PTR(func_val);
-    JS_FreeValue(ctx, func_val);
-
-end:
-    /* free the memory we allocated */
-    dbuf_free(&dbuf);
-
-    return m;
-}
 
 JSModuleDef *tjs_module_loader(JSContext *ctx, const char *module_name, void *opaque) {
-    static const char http[] = "http://";
-    static const char https[] = "https://";
-    static const char json_tpl_start[] = "export default JSON.parse(`";
-    static const char json_tpl_end[] = "`);";
-    static const char tjs_prefix[] = "tjs:";
 
     JSModuleDef *m;
     JSValue func_val;
-    int r, is_json;
+    int r;
     DynBuf dbuf;
 
-    if (strncmp(tjs_prefix, module_name, strlen(tjs_prefix)) == 0) {
-        return tjs__load_builtin(ctx, module_name);
-    }
-
-    if (strncmp(http, module_name, strlen(http)) == 0 || strncmp(https, module_name, strlen(https)) == 0) {
-        return tjs__load_http(ctx, module_name);
-    }
-
     tjs_dbuf_init(ctx, &dbuf);
-
-    is_json = js__has_suffix(module_name, ".json");
-
-    /* Support importing JSON files because... why not? */
-    if (is_json) {
-        dbuf_put(&dbuf, (const uint8_t *) json_tpl_start, strlen(json_tpl_start));
-    }
 
     r = tjs__load_file(ctx, &dbuf, module_name);
     if (r != 0) {
         dbuf_free(&dbuf);
         JS_ThrowReferenceError(ctx, "could not load '%s'", module_name);
         return NULL;
-    }
-
-    if (is_json) {
-        dbuf_put(&dbuf, (const uint8_t *) json_tpl_end, strlen(json_tpl_end));
     }
 
     /* Add null termination, required by JS_Eval. */
@@ -233,7 +169,9 @@ char *tjs_module_normalizer(JSContext *ctx, const char *base_name, const char *n
 
     if (name[0] != '.') {
         /* if no initial dot, the module name is not modified */
-        return js_strdup(ctx, name);
+        filename=js_strdup(ctx, name);
+        tjs__normalize_pathsep(filename);
+        return filename;
     }
 
     /* Normalize base_name. This is the path to the importing module, and
@@ -258,9 +196,9 @@ char *tjs_module_normalizer(JSContext *ctx, const char *base_name, const char *n
     /* we only normalize the leading '..' or '.' */
     r = name;
     for (;;) {
-        if (r[0] == '.' && r[1] == TJS__PATHSEP_POSIX) {
+        if (r[0] == '.' && r[1] == TJS__PATHSEP) {
             r += 2;
-        } else if (r[0] == '.' && r[1] == '.' && r[2] == TJS__PATHSEP_POSIX) {
+        } else if (r[0] == '.' && r[1] == '.' && r[2] == TJS__PATHSEP) {
             /* remove the last path element of filename, except if "."
                or ".." */
             if (filename[0] == '\0') {

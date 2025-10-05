@@ -17,7 +17,7 @@ import './blob.js';
 import './file.js';
 import './file-reader.js';
 import './form-data.js';
-import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only';
+import './abortcontroller-polyfill-only.js';
 import './xhr.js';
 import './fetch/polyfill.js';
 
@@ -25,8 +25,12 @@ import './console.js';
 import './crypto.js';
 import './performance.js';
 import './storage.js';
-import './worker.js';
+
 import './ws.js';
 
-import 'web-streams-polyfill/polyfill';
-import 'compression-streams-polyfill';
+import './web-streams-polyfill.js';
+import './compression-streams-polyfill.js';
+
+//Initial worker after compression-streams-polyfill.js, To prevent recursive worker constructor.
+//FIXME: make worker avaiable for compression-streams-polyfill.js
+import './worker.js';

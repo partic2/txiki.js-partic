@@ -23,6 +23,7 @@
  */
 
 #include "private.h"
+#include "quickjs.h"
 #include "version.h"
 
 #include <string.h>
@@ -140,6 +141,18 @@ static JSValue tjs_evalBytecode(JSContext *ctx, JSValue this_val, int argc, JSVa
     return JS_EvalFunction(ctx, obj);
 }
 
+static JSValue tjs_setOnMessage(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
+    TJSRuntime *qrt = TJS_GetRuntime(ctx);
+    if(!JS_IsUndefined(qrt->builtins.tjs_core_on_message)){
+        JS_FreeValue(ctx, qrt->builtins.tjs_core_on_message);
+        qrt->builtins.tjs_core_on_message=JS_UNDEFINED;
+    }
+    if(argc>=0){
+        qrt->builtins.tjs_core_on_message=JS_DupValue(ctx, argv[0]);
+    }
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry tjs_engine_funcs[] = {
     TJS_CFUNC_DEF("setMemoryLimit", 1, tjs_setMemoryLimit),
     TJS_CFUNC_DEF("setMaxStackSize", 1, tjs_setMaxStackSize),
@@ -147,6 +160,7 @@ static const JSCFunctionListEntry tjs_engine_funcs[] = {
     TJS_CFUNC_DEF("serialize", 1, tjs_serialize),
     TJS_CFUNC_DEF("deserialize", 1, tjs_deserialize),
     TJS_CFUNC_DEF("evalBytecode", 1, tjs_evalBytecode),
+    TJS_CFUNC_DEF("setOnMessage", 1, tjs_setOnMessage),
 };
 
 /* clang-format off */
@@ -175,4 +189,7 @@ void tjs__mod_engine_init(JSContext *ctx, JSValue ns) {
     JS_DefinePropertyValueStr(ctx, ns, "gc", gc, JS_PROP_C_W_E);
 
     JS_DefinePropertyValueStr(ctx, ns, "versions", versions, JS_PROP_C_W_E);
+
+    TJSRuntime *qrt = TJS_GetRuntime(ctx);
+    qrt->builtins.tjs_core_on_message=JS_UNDEFINED;
 }

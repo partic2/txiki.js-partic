@@ -24,6 +24,7 @@
 
 #include "mem.h"
 #include "private.h"
+#include "quickjs.h"
 #include "tjs.h"
 
 #include <string.h>
@@ -377,6 +378,8 @@ error:;
     return JS_UNDEFINED;
 }
 
+static const char* worker_bootstrap_js="globalThis[Symbol.for('tjs.internal.core')].__worker_bootstrap();undefined;";
+
 /* This is what the worker runs */
 static void worker_entry(void *arg) {
     worker_data_t *wd = arg;
@@ -395,7 +398,19 @@ static void worker_entry(void *arg) {
     JS_FreeValue(ctx, sym);
     JS_FreeValue(ctx, global_obj);
 
-    CHECK_EQ(tjs__eval_bytecode(ctx, tjs__worker_bootstrap, tjs__worker_bootstrap_size, true), 0);
+    JS_Eval(ctx, worker_bootstrap_js, strlen(worker_bootstrap_js), "<evalScript>", JS_EVAL_TYPE_GLOBAL);
+
+    for (;;) {
+        JSContext *pCtx;
+        int err = JS_ExecutePendingJob(JS_GetRuntime(ctx), &pCtx);
+        if (err <= 0) {
+            if (err < 0) {
+                TJSRuntime *qrt = TJS_GetRuntime(ctx);
+                CHECK_NOT_NULL(qrt);
+            }
+            break;
+        }
+    }
 
     /* Load and eval the specifier when the loop runs. */
     JSValue specifier = JS_NewString(ctx, wd->specifier);

@@ -25,6 +25,7 @@
 #include "utils.h"
 
 #include "private.h"
+#include "quickjs.h"
 #include "tjs.h"
 
 #include <stdlib.h>
@@ -157,6 +158,19 @@ void tjs_dump_error1(JSContext *ctx, JSValue exception_val) {
     fflush(stderr);
 }
 
+void tjs__send_core_message(JSContext *ctx,const char *type,JSValue arg1){
+    TJSRuntime *qrt = TJS_GetRuntime(ctx);
+    if(!JS_IsUndefined(qrt->builtins.tjs_core_on_message)){
+        JSValue argv[2];
+        argv[0]=JS_NewString(ctx,type);
+        argv[1]=arg1;
+        JSValue ret=JS_Call(ctx, qrt->builtins.tjs_core_on_message, JS_UNDEFINED, 2, argv);
+        JS_FreeValue(ctx,ret);
+        JS_FreeValue(ctx, argv[0]);
+    }
+}
+
+
 void tjs_call_handler(JSContext *ctx, JSValue func, int argc, JSValue *argv) {
     JSValue ret, func1;
     /* 'func' might be destroyed when calling itself (if it frees the
@@ -165,9 +179,9 @@ void tjs_call_handler(JSContext *ctx, JSValue func, int argc, JSValue *argv) {
     ret = JS_Call(ctx, func1, JS_UNDEFINED, argc, argv);
     JS_FreeValue(ctx, func1);
     if (JS_IsException(ret)) {
-        TJSRuntime *qrt = TJS_GetRuntime(ctx);
-        CHECK_NOT_NULL(qrt);
-        TJS_Stop(qrt);
+        JSValue jserr=JS_GetException(ctx);
+        tjs__send_core_message(ctx, "uncaughtException", jserr);
+        JS_FreeValue(ctx, jserr);
     }
     JS_FreeValue(ctx, ret);
 }

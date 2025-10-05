@@ -23,14 +23,12 @@
  */
 
 #include "private.h"
+#include "quickjs.h"
 #include "version.h"
 
 #include <string.h>
 #include <unistd.h>
 #include <uv.h>
-
-extern const uint8_t tjs__run_repl[];
-extern const uint32_t tjs__run_repl_size;
 
 
 static JSValue tjs_evalFile(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
@@ -72,11 +70,6 @@ static JSValue tjs_evalScript(JSContext *ctx, JSValue this_val, int argc, JSValu
     return ret;
 }
 
-static JSValue tjs_runRepl(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
-    tjs__eval_bytecode(ctx, tjs__run_repl, tjs__run_repl_size, false);
-
-    return JS_UNDEFINED;
-}
 
 static JSValue tjs_isArrayBuffer(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     return JS_NewBool(ctx, JS_IsArrayBuffer(argv[0]));
@@ -158,15 +151,27 @@ static JSValue tjs_randomUUID(JSContext *ctx, JSValue this_val, int argc, JSValu
     return JS_NewString(ctx, v);
 }
 
+//For debug use
+static JSValue tjs_debugprint(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+    printf("[TJS DEBUG]:");
+    if(argc>=0 && JS_IsString(argv[0])){
+        const char *s=JS_ToCString(ctx, argv[0]);
+        printf("%s",s);
+        JS_FreeCString(ctx, s);
+    }
+    printf("\n");
+    return JS_UNDEFINED;
+}
+
 /* clang-format off */
 static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("evalFile", 1, tjs_evalFile),
     TJS_CFUNC_DEF("evalScript", 1, tjs_evalScript),
     TJS_CFUNC_DEF("loadScript", 1, tjs_loadScript),
     TJS_CFUNC_DEF("randomUUID", 0, tjs_randomUUID),
-    TJS_CFUNC_DEF("runRepl", 0, tjs_runRepl),
     TJS_CFUNC_DEF("isArrayBuffer", 1, tjs_isArrayBuffer),
     TJS_CFUNC_DEF("detachArrayBuffer", 1, tjs_detachArrayBuffer),
+    TJS_CFUNC_DEF("debugprint", 1, tjs_debugprint),
     TJS_CGETSET_DEF("exePath", tjs_exepath, NULL),
 };
 /* clang-format on */

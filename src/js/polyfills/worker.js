@@ -3,7 +3,7 @@ const urlGetObjectURL = Symbol.for('tjs.internal.url.getObjectURL');
 const blobGetParts = Symbol.for('tjs.internal.blob.getParts');
 const _Worker = core.Worker;
 
-import { defineEventAttribute } from './event-target';
+import { defineEventAttribute } from './event-target.js';
 
 const kWorker = Symbol('kWorker');
 

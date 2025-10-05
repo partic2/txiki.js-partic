@@ -59,15 +59,13 @@ struct TJSRuntime {
         int64_t next_timer;
     } timers;
     struct {
-        JSValue promise_event_ctor;
-        JSValue dispatch_event_func;
+        JSValue tjs_core_on_message;
     } builtins;
 };
 
 void tjs__mod_dns_init(JSContext *ctx, JSValue ns);
-void tjs__mod_engine_init(JSContext *ctx, JSValue ns);
 void tjs__mod_error_init(JSContext *ctx, JSValue ns);
-void tjs__mod_ffi_init(JSContext *ctx, JSValue ns);
+void tjs__mod_engine_init(JSContext *ctx, JSValue ns);
 void tjs__mod_fs_init(JSContext *ctx, JSValue ns);
 void tjs__mod_fswatch_init(JSContext *ctx, JSValue ns);
 void tjs__mod_os_init(JSContext *ctx, JSValue ns);
@@ -109,6 +107,7 @@ void tjs__destroy_timers(TJSRuntime *qrt);
 
 void tjs__sab_free(void *opaque, void *ptr);
 void tjs__sab_dup(void *opaque, void *ptr);
+void tjs__send_core_message(JSContext *ctx,const char *type,JSValue arg1);
 
 uv_loop_t *TJS_GetLoop(TJSRuntime *qrt);
 TJSRuntime *TJS_NewRuntimeWorker(void);

@@ -189,7 +189,8 @@ class XMLHttpRequest extends EventTarget {
     }
 
     [kXhrGetAndClearResponseBuffer]() {
-        return this[kXHR].__tjsGetAndClearResponseBuffer();
+        let data=this[kXHR].__tjsGetAndClearResponseBuffer();
+        return data;
     }
 
     [kXhrStreamSend](buffer) {
