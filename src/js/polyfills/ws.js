@@ -12,6 +12,9 @@ class WebSocket extends EventTarget {
     static OPEN = WS.OPEN;
     static CLOSING = WS.CLOSING;
     static CLOSED = WS.CLOSED;
+    static __tjs_ws_fastXor(mask,buffer){
+        return WS.__tjs_ws_fastXor(mask,buffer)
+    }
     CONNECTING = WS.CONNECTING;
     OPEN = WS.OPEN;
     CLOSING = WS.CLOSING;
@@ -132,6 +135,8 @@ class WebSocket extends EventTarget {
 
         this[kWS].close(code, reason);
     }
+
+    
 }
 
 const xhrProto = WebSocket.prototype;

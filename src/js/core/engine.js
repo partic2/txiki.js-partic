@@ -30,6 +30,20 @@ Object.defineProperty(engine, 'evalBytecode', {
     value: core.evalBytecode
 });
 
+Object.defineProperty(engine, 'newStringFromUtf8Buffer', {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: core.newStringFromUtf8Buffer
+});
+
+Object.defineProperty(engine, 'newUtf8BufferFromString', {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: core.newUtf8BufferFromString
+});
+
 // Interface for the garbage collection
 const gcState = {
     enabled: true,

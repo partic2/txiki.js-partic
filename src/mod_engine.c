@@ -24,6 +24,7 @@
 
 #include "private.h"
 #include "quickjs.h"
+#include "tjs.h"
 #include "version.h"
 
 #include <string.h>
@@ -153,6 +154,40 @@ static JSValue tjs_setOnMessage(JSContext *ctx,JSValue this_val, int argc, JSVal
     return JS_UNDEFINED;
 }
 
+static JSValue tjs_newStringFromUtf8Buffer(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
+    if(argc>0){
+        size_t size;
+        char *data=(char *)JS_GetUint8Array(ctx, &size, argv[0]);
+        if(data==NULL){
+            return JS_UNDEFINED;
+        }
+        //Shall we copy the buffer first?
+        JSValue jv=JS_NewStringLen(ctx, data, size);
+        return jv;
+    }else{
+        return JS_UNDEFINED;
+    }
+}
+
+static void tjs__freeCStringHandle(JSRuntime *rt, void *opaque, void *ptr){
+    JS_FreeCString((JSContext *)opaque,(const char *)ptr);
+}
+
+static JSValue tjs_newUtf8BufferFromString(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
+    if(argc>0){
+        size_t len=0;
+        const char *s=JS_ToCStringLen(ctx,&len, argv[0]);
+        return JS_NewUint8Array(ctx,(uint8_t *) s, len, tjs__freeCStringHandle, ctx, 0);
+    }else{
+        return JS_UNDEFINED;
+    }
+}
+
+static JSValue tjs__TjsExit(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
+    TJS_Stop(TJS_GetRuntime(ctx));
+    return JS_UNDEFINED;
+}
+
 static const JSCFunctionListEntry tjs_engine_funcs[] = {
     TJS_CFUNC_DEF("setMemoryLimit", 1, tjs_setMemoryLimit),
     TJS_CFUNC_DEF("setMaxStackSize", 1, tjs_setMaxStackSize),
@@ -161,6 +196,9 @@ static const JSCFunctionListEntry tjs_engine_funcs[] = {
     TJS_CFUNC_DEF("deserialize", 1, tjs_deserialize),
     TJS_CFUNC_DEF("evalBytecode", 1, tjs_evalBytecode),
     TJS_CFUNC_DEF("setOnMessage", 1, tjs_setOnMessage),
+    TJS_CFUNC_DEF("newStringFromUtf8Buffer", 1, tjs_newStringFromUtf8Buffer),
+    TJS_CFUNC_DEF("newUtf8BufferFromString", 1, tjs_newUtf8BufferFromString),
+    TJS_CFUNC_DEF("tjsExit", 0, tjs__TjsExit),
 };
 
 /* clang-format off */

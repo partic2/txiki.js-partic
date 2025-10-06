@@ -26,6 +26,7 @@
 #include "quickjs.h"
 #include "version.h"
 
+
 #include <string.h>
 #include <unistd.h>
 #include <uv.h>
@@ -152,7 +153,7 @@ static JSValue tjs_randomUUID(JSContext *ctx, JSValue this_val, int argc, JSValu
 }
 
 //For debug use
-static JSValue tjs_debugprint(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
+static JSValue tjs__debugprint(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
     printf("[TJS DEBUG]:");
     if(argc>=0 && JS_IsString(argv[0])){
         const char *s=JS_ToCString(ctx, argv[0]);
@@ -163,6 +164,20 @@ static JSValue tjs_debugprint(JSContext *ctx, JSValue this_val, int argc, JSValu
     return JS_UNDEFINED;
 }
 
+#include <mbedtls/sha1.h>
+
+static JSValue tjs__mbedtls_sha1(JSContext *ctx, JSValue this_val, int argc, JSValue *argv){
+    uint8_t output[20];
+    if(argc>0){
+        size_t size;
+        const uint8_t *data=JS_GetUint8Array(ctx, &size, argv[0]);
+        mbedtls_sha1(data, size, output);
+        return JS_NewUint8ArrayCopy(ctx, output, 20);
+    }
+    return JS_UNDEFINED;
+}
+
+
 /* clang-format off */
 static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("evalFile", 1, tjs_evalFile),
@@ -171,7 +186,8 @@ static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("randomUUID", 0, tjs_randomUUID),
     TJS_CFUNC_DEF("isArrayBuffer", 1, tjs_isArrayBuffer),
     TJS_CFUNC_DEF("detachArrayBuffer", 1, tjs_detachArrayBuffer),
-    TJS_CFUNC_DEF("debugprint", 1, tjs_debugprint),
+    TJS_CFUNC_DEF("debugprint", 1, tjs__debugprint),
+    TJS_CFUNC_DEF("mbedtls_sha1", 1, tjs__mbedtls_sha1),
     TJS_CGETSET_DEF("exePath", tjs_exepath, NULL),
 };
 /* clang-format on */

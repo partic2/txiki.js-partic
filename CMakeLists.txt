@@ -128,7 +128,16 @@ target_compile_definitions(tjs PRIVATE WIN32_LEAN_AND_MEAN)
 endif()
 target_include_directories(tjs PRIVATE src)
 target_include_directories(tjs PUBLIC include)
-target_link_libraries(tjs qjs uv_a sqlite3 libcurl_static ffi_static)
+
+set(TJS_DEPLIBS qjs uv_a sqlite3 libcurl_static mbedtls)
+target_link_libraries(tjs ${TJS_DEPLIBS})
+
+add_custom_command(TARGET tjs POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/js 
+        $<TARGET_FILE_DIR:tjs>/tjs-initialize
+    COMMENT "Copying js initialize files to target output directory..."
+)
 
 add_executable(tjs-cli
     src/cli.c

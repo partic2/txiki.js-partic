@@ -25,6 +25,7 @@
 #include "curl-utils.h"
 #include "curl-websocket.h"
 #include "private.h"
+#include "quickjs.h"
 
 enum { WS_EVENT_CLOSE = 0, WS_EVENT_ERROR, WS_EVENT_MESSAGE, WS_EVENT_OPEN, WS_EVENT_MAX };
 
@@ -264,11 +265,32 @@ static JSValue tjs_ws_sendText(JSContext *ctx, JSValue this_val, int argc, JSVal
     return JS_UNDEFINED;
 }
 
+static JSValue tjs_ws_fastXor(JSContext *ctx, JSValue this_val,int argc,JSValue *argv){
+    if(argc>=2){
+        uint8_t *mask;
+        size_t maskLen;
+        uint8_t *buf;
+        size_t bufLen;
+        mask=JS_GetUint8Array(ctx, &maskLen, argv[0]);
+        buf=JS_GetUint8Array(ctx, &bufLen, argv[1]);
+        if(mask==NULL || buf==NULL){
+            return JS_FALSE;
+        }
+        for(int i1=0;i1<bufLen;i1++){
+            buf[i1]=buf[i1]^mask[i1%maskLen];
+        }
+        return JS_TRUE;
+    }else{
+        return JS_FALSE;
+    }
+}
+
 static const JSCFunctionListEntry tjs_ws_class_funcs[] = {
     JS_PROP_INT32_DEF("CONNECTING", WS_STATE_CONNECTING, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("OPEN", WS_STATE_OPEN, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("CLOSING", WS_STATE_CLOSING, JS_PROP_ENUMERABLE),
     JS_PROP_INT32_DEF("CLOSED", WS_STATE_CLOSED, JS_PROP_ENUMERABLE),
+    TJS_CFUNC_DEF("__tjs_ws_fastXor", 2, tjs_ws_fastXor)
 };
 
 static const JSCFunctionListEntry tjs_ws_proto_funcs[] = {
@@ -279,7 +301,7 @@ static const JSCFunctionListEntry tjs_ws_proto_funcs[] = {
     JS_CGETSET_DEF("readyState", tjs_ws_readystate_get, NULL),
     TJS_CFUNC_DEF("close", 2, tjs_ws_close),
     TJS_CFUNC_DEF("sendBinary", 1, tjs_ws_sendBinary),
-    TJS_CFUNC_DEF("sendText", 1, tjs_ws_sendText),
+    TJS_CFUNC_DEF("sendText", 1, tjs_ws_sendText)
 };
 
 void tjs__mod_ws_init(JSContext *ctx, JSValue ns) {
