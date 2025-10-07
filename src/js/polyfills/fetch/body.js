@@ -122,7 +122,6 @@ export const BodyMixin = {
     async arrayBuffer() {
         // TODO: expose Blob.parts to reduce memeory copy?
         let r=await (await this.blob()).arrayBuffer();
-        console.info('prepare decoding'+r.byteLength);
         return r;
     },
 
