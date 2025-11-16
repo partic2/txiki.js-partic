@@ -21,13 +21,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#ifndef _TJS_CURL_UTILS_H
+#define _TJS_CURL_UTILS_H
 #include "private.h"
 #include "tjs.h"
 
 #include <curl/curl.h>
 
 #define TJS__CURL_PRIVATE_MAGIC 0xde4dc0d3
+#define TJS__CURL_CWS_PRIVATE_MAGIC 0xee4dc0d3
 
 typedef void (*tjs_curl_done_cb)(CURLMsg *message, void *arg);
 typedef struct {
@@ -39,3 +41,5 @@ typedef struct {
 int tjs_curl_load_http(DynBuf *dbuf, const char *url);
 CURL *tjs__curl_easy_init(CURL *curl_h);
 CURLM *tjs__get_curlm(JSContext *ctx);
+
+#endif

@@ -133,6 +133,14 @@ static void cws__on_close(void *data,
     maybe_emit_event(w, WS_EVENT_CLOSE, event);
 }
 
+void cws__done_cb(CURLMsg *message, void *data){
+    TJSWs *w = (TJSWs *) data;
+    if(message->data.result!=CURLE_OK){
+        JSValue v = JS_NewString(w->ctx, "CURL error");
+        maybe_emit_event(w, WS_EVENT_ERROR, v);
+    }
+}
+
 static JSValue tjs_ws_constructor(JSContext *ctx, JSValue new_target, int argc, JSValue *argv) {
     JSValue obj = JS_NewObjectClass(ctx, tjs_ws_class_id);
     if (JS_IsException(obj)) {
@@ -158,6 +166,7 @@ static JSValue tjs_ws_constructor(JSContext *ctx, JSValue new_target, int argc, 
     w->ws_callbacks.on_close = &cws__on_close;
     w->ws_callbacks.on_connect = &cws__on_connect;
     w->ws_callbacks.on_text = &cws__on_text;
+    w->ws_callbacks.done_cb=&cws__done_cb;
     w->ws_callbacks.data = w;
 
     w->curlm_h = tjs__get_curlm(ctx);

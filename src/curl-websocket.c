@@ -143,6 +143,7 @@ struct cws_frame_header {
 };
 
 struct cws_data {
+    tjs_curl_private_t tjs_priv;
     CURL *easy;
     struct cws_callbacks cbs;
     struct {
@@ -909,6 +910,9 @@ cws_new(const char *url, const char *websocket_protocols, const struct cws_callb
     
     priv = calloc(1, sizeof(struct cws_data));
     priv->easy = easy;
+    priv->tjs_priv.magic=TJS__CURL_CWS_PRIVATE_MAGIC;
+    priv->tjs_priv.arg=callbacks->data;
+    priv->tjs_priv.done_cb=callbacks->done_cb;
     curl_easy_setopt(easy, CURLOPT_PRIVATE, priv);
     curl_easy_setopt(easy, CURLOPT_HEADERFUNCTION, _cws_receive_header);
     curl_easy_setopt(easy, CURLOPT_HEADERDATA, priv);

@@ -32,6 +32,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "curl-utils.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -94,6 +96,7 @@ struct cws_callbacks {
      */
     void (*on_close)(void *data, CURL *easy, enum cws_close_reason reason, const char *reason_text, size_t reason_text_len);
     const void *data;
+    tjs_curl_done_cb done_cb;
 };
 
 /**
