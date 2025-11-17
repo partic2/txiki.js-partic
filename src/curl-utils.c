@@ -134,7 +134,9 @@ static void check_multi_info(TJSRuntime *qrt) {
                 curl_private->done_cb(message, curl_private->arg);
 
                 curl_multi_remove_handle(qrt->curl_ctx.curlm_h, easy_handle);
-                curl_easy_cleanup(easy_handle);
+                if(curl_private->magic==TJS__CURL_PRIVATE_MAGIC){
+                    curl_easy_cleanup(easy_handle);
+                }
                 break;
             }
             default:

@@ -46,7 +46,6 @@ static void tjs_ws_finalizer(JSRuntime *rt, JSValue val) {
     TJSWs *w = JS_GetOpaque(val, tjs_ws_class_id);
     if (w) {
         if (w->curl_h) {
-            curl_multi_remove_handle(w->curlm_h, w->curl_h);
             cws_free(w->curl_h);
         }
         for (int i = 0; i < WS_EVENT_MAX; i++) {
