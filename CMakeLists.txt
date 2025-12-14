@@ -60,7 +60,6 @@ if(NOT TARGET uv_a)
 add_subdirectory(${DEPS_SOURCE_DIRS}/libuv ./build_libuv EXCLUDE_FROM_ALL)
 endif()
 
-add_subdirectory(deps/sqlite3 EXCLUDE_FROM_ALL)
 
 
 add_subdirectory(deps/curl EXCLUDE_FROM_ALL)
@@ -88,7 +87,6 @@ add_library(tjs STATIC
     src/mod_fswatch.c
     src/mod_os.c
     src/mod_process.c
-    src/mod_sqlite3.c
     src/mod_streams.c
     src/mod_sys.c
     src/mod_udp.c
@@ -103,11 +101,6 @@ add_library(ffi-test SHARED
     tests/fixtures/ffi-test-lib.c
 )
 
-add_library(sqlite-test SHARED
-    tests/fixtures/sqlite-test-ext.c
-)
-
-target_link_libraries(sqlite-test sqlite3)
 
 if(NOT TARGET ffi_static)
 add_subdirectory(${DEPS_SOURCE_DIRS}/libffi ./build_libffi)
@@ -129,7 +122,7 @@ endif()
 target_include_directories(tjs PRIVATE src)
 target_include_directories(tjs PUBLIC include)
 
-set(TJS_DEPLIBS qjs uv_a sqlite3 libcurl_static mbedtls)
+set(TJS_DEPLIBS qjs uv_a libcurl_static mbedtls)
 target_link_libraries(tjs ${TJS_DEPLIBS})
 
 add_custom_command(TARGET tjs POST_BUILD

@@ -62,7 +62,6 @@ def pull(dep_name, repo_url, branch="main"):
 
 
 def main():
-    pull('libffi','https://gitee.com/partic/libffi','main')
     pull('libuv','https://gitee.com/partic/libuv-patched','v1.x')
 
 if __name__=='__main__':

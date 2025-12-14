@@ -31,7 +31,6 @@
 
 #include <curl/curl.h>
 #include <quickjs.h>
-#include <sqlite3.h>
 #include <stdbool.h>
 #include <uv.h>
 
@@ -71,7 +70,6 @@ void tjs__mod_fswatch_init(JSContext *ctx, JSValue ns);
 void tjs__mod_os_init(JSContext *ctx, JSValue ns);
 void tjs__mod_process_init(JSContext *ctx, JSValue ns);
 void tjs__mod_signals_init(JSContext *ctx, JSValue ns);
-void tjs__mod_sqlite3_init(JSContext *ctx, JSValue ns);
 void tjs__mod_streams_init(JSContext *ctx, JSValue ns);
 void tjs__mod_sys_init(JSContext *ctx, JSValue ns);
 void tjs__mod_timers_init(JSContext *ctx, JSValue ns);

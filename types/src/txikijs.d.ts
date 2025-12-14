@@ -171,7 +171,6 @@ declare global {
                 readonly uv: string;
                 readonly curl: string;
                 readonly wasm3: string;
-                readonly sqlite3: string;
                 readonly mimalloc?: string;
             };
         }

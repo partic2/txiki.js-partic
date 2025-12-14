@@ -442,6 +442,15 @@ function test_number()
 
     assert((1.3).toString(7), "1.2046204620462046205");
     assert((1.3).toString(35), "1.ahhhhhhhhhm");
+
+    assert((123.456).toExponential(100),
+           "1.2345600000000000306954461848363280296325683593750000000000000000000000000000000000000000000000000000e+2");
+    assert((1.23e-99).toExponential(100),
+           "1.2299999999999999636794326616259654935901564299639709630577493044757187515388707554223010856511630028e-99");
+    assert((-0.0007).toExponential(100),
+           "-6.9999999999999999288763374849509091291110962629318237304687500000000000000000000000000000000000000000e-4");
+    assert((0).toExponential(100),
+           "0.0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e+0");
 }
 
 function test_eval2()
@@ -586,10 +595,38 @@ function test_typed_array()
     try {
         new TypedArray(); // extensible but not instantiable
     } catch (e) {
+        assert(e instanceof TypeError);
         assert(/cannot be called/.test(e.message));
         caught = true;
     }
     assert(caught);
+
+    // https://github.com/quickjs-ng/quickjs/issues/1208
+    buffer = new ArrayBuffer(16);
+    a = new Uint8Array(buffer);
+    a.fill(42);
+    assert(a[0], 42);
+    buffer.transfer();
+    assert(a[0], undefined);
+
+    // https://github.com/quickjs-ng/quickjs/issues/1210
+    var buffer = new ArrayBuffer(16, {maxByteLength: 16});
+    var desc = Object.getOwnPropertyDescriptor(ArrayBuffer, Symbol.species);
+    assert(typeof desc.get, "function");
+    var get = function() {
+        buffer.resize(1);
+        return ArrayBuffer;
+    };
+    Object.defineProperty(ArrayBuffer, Symbol.species, {...desc, get});
+    let ex;
+    try {
+        buffer.slice();
+    } catch (ex_) {
+        ex = ex_;
+    }
+    Object.defineProperty(ArrayBuffer, Symbol.species, desc); // restore
+    assert(ex instanceof TypeError);
+    assert("ArrayBuffer is detached", ex.message);
 }
 
 function test_json()
