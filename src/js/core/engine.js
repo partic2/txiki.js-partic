@@ -44,6 +44,20 @@ Object.defineProperty(engine, 'newUtf8BufferFromString', {
     value: core.newUtf8BufferFromString
 });
 
+Object.defineProperty(engine, 'bufferToBase64', {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: core.bufferToBase64
+});
+
+Object.defineProperty(engine, 'base64ToBuffer', {
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: core.base64ToBuffer
+});
+
 // Interface for the garbage collection
 const gcState = {
     enabled: true,

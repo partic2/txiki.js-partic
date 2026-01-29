@@ -161,7 +161,6 @@ static JSValue tjs_newStringFromUtf8Buffer(JSContext *ctx,JSValue this_val, int 
         if(data==NULL){
             return JS_UNDEFINED;
         }
-        //Shall we copy the buffer first?
         JSValue jv=JS_NewStringLen(ctx, data, size);
         return jv;
     }else{
@@ -169,15 +168,13 @@ static JSValue tjs_newStringFromUtf8Buffer(JSContext *ctx,JSValue this_val, int 
     }
 }
 
-static void tjs__freeCStringHandle(JSRuntime *rt, void *opaque, void *ptr){
-    JS_FreeCString((JSContext *)opaque,(const char *)ptr);
-}
-
 static JSValue tjs_newUtf8BufferFromString(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
     if(argc>0){
         size_t len=0;
         const char *s=JS_ToCStringLen(ctx,&len, argv[0]);
-        return JS_NewUint8Array(ctx,(uint8_t *) s, len, tjs__freeCStringHandle, ctx, 0);
+        JSValue jv=JS_NewUint8ArrayCopy(ctx, (uint8_t *)s, len);
+        JS_FreeCString(ctx,s);
+        return jv;
     }else{
         return JS_UNDEFINED;
     }
@@ -186,6 +183,110 @@ static JSValue tjs_newUtf8BufferFromString(JSContext *ctx,JSValue this_val, int 
 static JSValue tjs__TjsExit(JSContext *ctx,JSValue this_val, int argc, JSValue *argv){
     TJS_Stop(TJS_GetRuntime(ctx));
     return JS_UNDEFINED;
+}
+
+/* https://github.com/zhicheng/base64/blob/master/base64.c */
+char *tjs__base64chartable = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static JSValue tjs_bufferToBase64(JSContext * ctx,JSValue this_val,int argc,JSValue *argv){
+    if(argc>0){
+        size_t inlen;
+        char *in=(char *)JS_GetUint8Array(ctx, &inlen, argv[0]);
+        if(in==NULL){
+            return JS_UNDEFINED;
+        }
+        char *out=js_malloc(ctx, inlen*4/3+3);
+        int s;
+        unsigned int i,j,c,l;
+        s = 0;l = 0;
+        for (i = j = 0; i < inlen; i++) {
+            c = in[i];
+            switch (s) {
+            case 0:
+                s = 1;
+                out[j++] = tjs__base64chartable[(c >> 2) & 0x3F];
+                break;
+            case 1:
+                s = 2;
+                out[j++] = tjs__base64chartable[((l & 0x3) << 4) | ((c >> 4) & 0xF)];
+                break;
+            case 2:
+                s = 0;
+                out[j++] = tjs__base64chartable[((l & 0xF) << 2) | ((c >> 6) & 0x3)];
+                out[j++] = tjs__base64chartable[c & 0x3F];
+                break;
+            }
+            l = c;
+        }
+        switch (s) {
+        case 1:
+            out[j++] = tjs__base64chartable[(l & 0x3) << 4];
+            out[j++] = '=';
+            out[j++] = '=';
+            break;
+        case 2:
+            out[j++] = tjs__base64chartable[(l & 0xF) << 2];
+            out[j++] = '=';
+            break;
+        }
+        JSValue jv=JS_NewUint8ArrayCopy(ctx, (uint8_t *)out, j);
+        js_free(ctx,out);
+        return jv;
+    }else{
+        return JS_UNDEFINED;
+    }
+}
+
+static JSValue tjs_base64ToBuffer(JSContext * ctx,JSValue this_val,int argc,JSValue *argv){
+    if(argc>0){
+        size_t inlen;
+        char *in=(char *)JS_GetUint8Array(ctx, &inlen, argv[0]);
+        unsigned int i,j,c;
+        if (inlen & 0x3) {
+            return JS_UNDEFINED;
+        }
+        char *out=js_malloc(ctx, inlen*3/4+1);
+        for (i = j = 0; i < inlen; i++) {
+            if (in[i] == '=') {
+                break;
+            }
+            if (in[i] >= 'A' && in[i] <='Z' ) {
+                c=in[i]-'A';
+            }else if(in[i]>='a' && in[i]<='z'){
+                c=in[i]-'a'+26;
+            }else if(in[i]>='0' && in[i]<='9'){
+                c=in[i]-'0'+52;
+            }else if(in[i]=='+'){
+                c=62;
+            }else if(in[i]=='/'){
+                c=63;
+            }else{
+                js_free(ctx,out);
+                return JS_UNDEFINED;
+            }
+            switch (i & 0x3) {
+            case 0:
+                out[j] = (c << 2) & 0xFF;
+                break;
+            case 1:
+                out[j++] |= (c >> 4) & 0x3;
+                out[j] = (c & 0xF) << 4; 
+                break;
+            case 2:
+                out[j++] |= (c >> 2) & 0xF;
+                out[j] = (c & 0x3) << 6;
+                break;
+            case 3:
+                out[j++] |= c;
+                break;
+            }
+        }
+        JSValue jv=JS_NewUint8ArrayCopy(ctx, (uint8_t *)out, j);
+        js_free(ctx,out);
+	    return jv;
+    }else{
+        return JS_UNDEFINED;
+    }
+
 }
 
 static const JSCFunctionListEntry tjs_engine_funcs[] = {
@@ -198,6 +299,8 @@ static const JSCFunctionListEntry tjs_engine_funcs[] = {
     TJS_CFUNC_DEF("setOnMessage", 1, tjs_setOnMessage),
     TJS_CFUNC_DEF("newStringFromUtf8Buffer", 1, tjs_newStringFromUtf8Buffer),
     TJS_CFUNC_DEF("newUtf8BufferFromString", 1, tjs_newUtf8BufferFromString),
+    TJS_CFUNC_DEF("bufferToBase64", 1, tjs_bufferToBase64),
+    TJS_CFUNC_DEF("base64ToBuffer", 1, tjs_base64ToBuffer),
     TJS_CFUNC_DEF("tjsExit", 0, tjs__TjsExit),
 };
 
