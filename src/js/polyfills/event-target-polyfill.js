@@ -59,10 +59,10 @@ class ErrorEvent extends Event {
 const kMessageEventData = Symbol('kMessageEventData');
 
 class MessageEvent extends Event {
-    constructor(eventTye, data) {
+    constructor(eventTye, opt) {
         super(eventTye);
 
-        this[kMessageEventData] = data;
+        this[kMessageEventData] = opt?.data;
     }
 
     get data() {
