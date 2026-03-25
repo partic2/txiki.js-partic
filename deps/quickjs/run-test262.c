@@ -38,6 +38,7 @@
 #else
 #include <dirent.h>
 #include <unistd.h>
+#include <sys/stat.h>
 #endif
 
 #include "cutils.h"
@@ -418,6 +419,11 @@ static void consider_test_file(const char *path, const char *name, int is_dir)
     while (pathlen > 0 && ispathsep(path[pathlen-1]))
         pathlen--;
     snprintf(s, sizeof(s), "%.*s/%s", (int)pathlen, path, name);
+#if !defined(_WIN32) && !defined(DT_DIR)
+    struct stat st;
+    if (is_dir < 0)
+        is_dir = !stat(s, &st) && S_ISDIR(st.st_mode);
+#endif
     if (is_dir)
         find_test_files(s);
     else
@@ -448,7 +454,11 @@ static void find_test_files(const char *path)
     n = scandir(path, &ds, NULL, alphasort);
     for (i = 0; i < n; i++) {
         d = ds[i];
+#ifdef DT_DIR
         consider_test_file(path, d->d_name, d->d_type == DT_DIR);
+#else
+        consider_test_file(path, d->d_name, -1);
+#endif
         free(d);
     }
     free(ds);
@@ -899,6 +909,13 @@ static JSValue js_IsHTMLDDA(JSContext *ctx, JSValueConst this_val,
     return JS_NULL;
 }
 
+static JSValue js_gc(JSContext *ctx, JSValueConst this_val,
+                     int argc, JSValueConst *argv)
+{
+    JS_RunGC(JS_GetRuntime(ctx));
+    return JS_UNDEFINED;
+}
+
 static JSValue add_helpers1(JSContext *ctx)
 {
     JSValue global_obj;
@@ -908,6 +925,8 @@ static JSValue add_helpers1(JSContext *ctx)
 
     JS_SetPropertyStr(ctx, global_obj, "print",
                       JS_NewCFunction(ctx, js_print_262, "print", 1));
+    JS_SetPropertyStr(ctx, global_obj, "gc",
+                      JS_NewCFunction(ctx, js_gc, "gc", 0));
 
     is_html_dda = JS_NewCFunction(ctx, js_IsHTMLDDA, "IsHTMLDDA", 0);
     JS_SetIsHTMLDDA(ctx, is_html_dda);
@@ -952,12 +971,9 @@ static char *load_file(const char *filename, size_t *lenp)
 }
 
 static JSModuleDef *js_module_loader_test(JSContext *ctx,
-                                          const char *module_name, void *opaque)
+                                          const char *module_name, void *opaque,
+                                          JSValueConst attributes)
 {
-    size_t buf_len;
-    uint8_t *buf;
-    JSModuleDef *m;
-    JSValue func_val;
     char *filename, *slash, path[1024];
 
     // interpret import("bar.js") from path/to/foo.js as
@@ -971,24 +987,7 @@ static JSModuleDef *js_module_loader_test(JSContext *ctx,
             module_name = path;
         }
     }
-
-    buf = js_load_file(ctx, &buf_len, module_name);
-    if (!buf) {
-        JS_ThrowReferenceError(ctx, "could not load module filename '%s'",
-                               module_name);
-        return NULL;
-    }
-
-    /* compile the module */
-    func_val = JS_Eval(ctx, (char *)buf, buf_len, module_name,
-                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
-    js_free(ctx, buf);
-    if (JS_IsException(func_val))
-        return NULL;
-    /* the module is already referenced, so we must free it */
-    m = JS_VALUE_GET_PTR(func_val);
-    JS_FreeValue(ctx, func_val);
-    return m;
+    return js_module_load(ctx, module_name, opaque, attributes, js_load_file);
 }
 
 int is_line_sep(char c)
@@ -1766,7 +1765,7 @@ int run_test_buf(ThreadLocalStorage *tls, const char *filename, char *harness,
     JS_SetCanBlock(rt, can_block);
 
     /* loader for ES6 modules */
-    JS_SetModuleLoaderFunc(rt, NULL, js_module_loader_test, (void *) filename);
+    JS_SetModuleLoaderFunc2(rt, NULL, js_module_loader_test, NULL, (void *) filename);
 
     if (track_promise_rejections)
         JS_SetHostPromiseRejectionTracker(rt, js_std_promise_rejection_tracker, NULL);
@@ -2020,7 +2019,7 @@ int run_test262_harness_test(ThreadLocalStorage *tls, const char *filename,
     JS_SetCanBlock(rt, can_block);
 
     /* loader for ES6 modules */
-    JS_SetModuleLoaderFunc(rt, NULL, js_module_loader_test, (void *) filename);
+    JS_SetModuleLoaderFunc2(rt, NULL, js_module_loader_test, NULL, (void *) filename);
 
     add_helpers(ctx);
 

@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 
+#include "mem.h"
 #include "private.h"
 #include "quickjs.h"
 #include "version.h"
@@ -165,6 +166,7 @@ static JSValue tjs__debugprint(JSContext *ctx, JSValue this_val, int argc, JSVal
 }
 
 #include <mbedtls/sha1.h>
+
 
 static JSValue tjs__mbedtls_sha1(JSContext *ctx, JSValue this_val, int argc, JSValue *argv){
     uint8_t output[20];

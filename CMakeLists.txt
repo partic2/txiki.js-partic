@@ -72,7 +72,6 @@ add_library(tjs STATIC
     src/eval.c
     src/mem.c
     src/modules.c
-    src/sha1.c
     src/signals.c
     src/timers.c
     src/utils.c
@@ -90,12 +89,8 @@ add_library(tjs STATIC
     src/mod_streams.c
     src/mod_sys.c
     src/mod_udp.c
-    deps/quickjs/cutils.c
 )
 
-if(UNIX)
-    target_sources(tjs PUBLIC src/mod_posix-socket.c)
-endif()
 
 add_library(ffi-test SHARED
     tests/fixtures/ffi-test-lib.c

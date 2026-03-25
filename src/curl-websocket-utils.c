@@ -33,16 +33,13 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <uv.h>
-#include "sha1.h"
+
+#include <mbedtls/sha1.h>
 
 static void
 _cws_sha1(const void *input, const size_t input_len, void *output)
 {
-  SHA1_CTX ctx;
-
-  SHA1Init(&ctx);
-  SHA1Update(&ctx, input, input_len);
-  SHA1Final(output, &ctx);
+    mbedtls_sha1(input,input_len,output);
 }
 
 static inline void
