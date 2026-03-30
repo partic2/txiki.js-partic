@@ -126,8 +126,6 @@ static void tjs__bootstrap_core(JSContext *ctx, JSValue ns) {
     tjs__mod_timers_init(ctx, ns);
     tjs__mod_udp_init(ctx, ns);
     tjs__mod_worker_init(ctx, ns);
-    tjs__mod_ws_init(ctx, ns);
-    tjs__mod_xhr_init(ctx, ns);
 }
 
 JSValue tjs__get_args(JSContext *ctx) {
@@ -319,9 +317,6 @@ void TJS_FreeRuntime(TJSRuntime *qrt) {
     uv_close((uv_handle_t *) &qrt->jobs.idle, NULL);
     uv_close((uv_handle_t *) &qrt->jobs.check, NULL);
     uv_close((uv_handle_t *) &qrt->stop, NULL);
-    if (qrt->curl_ctx.curlm_h) {
-        uv_close((uv_handle_t *) &qrt->curl_ctx.timer, NULL);
-    }
 
     /* Destroy all timers */
     tjs__destroy_timers(qrt);
@@ -331,12 +326,6 @@ void TJS_FreeRuntime(TJSRuntime *qrt) {
     qrt->builtins.tjs_core_on_message = JS_UNDEFINED;
     JS_FreeContext(qrt->ctx);
     JS_FreeRuntime(qrt->rt);
-
-    /* Destroy CURLM handle. */
-    if (qrt->curl_ctx.curlm_h) {
-        curl_multi_cleanup(qrt->curl_ctx.curlm_h);
-        qrt->curl_ctx.curlm_h = NULL;
-    }
 
 
     /* Cleanup loop. All handles should be closed. */
@@ -361,7 +350,6 @@ void TJS_FreeRuntime(TJSRuntime *qrt) {
 }
 
 void TJS_Initialize(int argc, char **argv) {
-    curl_global_init(CURL_GLOBAL_ALL);
 
     CHECK_EQ(0, uv_replace_allocator(tjs__malloc, tjs__realloc, tjs__calloc, tjs__free));
 

@@ -18,7 +18,6 @@ import './file.js';
 import './file-reader.js';
 import './form-data.js';
 import './abortcontroller-polyfill-only.js';
-import './xhr.js';
 import './fetch/polyfill.js';
 
 import './console.js';
@@ -26,7 +25,6 @@ import './crypto.js';
 import './performance.js';
 import './storage.js';
 
-import './ws.js';
 
 import './web-streams-polyfill.js';
 import './compression-streams-polyfill.js';

@@ -29,7 +29,6 @@
 #include "tjs.h"
 #include "utils.h"
 
-#include <curl/curl.h>
 #include <quickjs.h>
 #include <stdbool.h>
 #include <uv.h>
@@ -49,10 +48,6 @@ struct TJSRuntime {
     uv_async_t stop;
     bool is_worker;
     bool freeing;
-    struct {
-        CURLM *curlm_h;
-        uv_timer_t timer;
-    } curl_ctx;
     struct {
         TJSTimer *timers;
         int64_t next_timer;
@@ -74,10 +69,7 @@ void tjs__mod_streams_init(JSContext *ctx, JSValue ns);
 void tjs__mod_sys_init(JSContext *ctx, JSValue ns);
 void tjs__mod_timers_init(JSContext *ctx, JSValue ns);
 void tjs__mod_udp_init(JSContext *ctx, JSValue ns);
-void tjs__mod_wasm_init(JSContext *ctx, JSValue ns);
 void tjs__mod_worker_init(JSContext *ctx, JSValue ns);
-void tjs__mod_ws_init(JSContext *ctx, JSValue ns);
-void tjs__mod_xhr_init(JSContext *ctx, JSValue ns);
 
 #ifndef _WIN32
 void tjs__mod_posix_socket_init(JSContext *ctx, JSValue ns);

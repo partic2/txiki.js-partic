@@ -22,7 +22,6 @@
  * THE SOFTWARE.
  */
 
-#include "curl-utils.h"
 #include "private.h"
 #include "tjs.h"
 #include "utils.h"

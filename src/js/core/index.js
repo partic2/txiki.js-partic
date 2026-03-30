@@ -9,7 +9,7 @@ import pathModule from './path.js';
 import { addSignalListener, removeSignalListener } from './signal.js';
 import { connect, listen } from './sockets.js';
 import { createStdin, createStdout, createStderr } from './stdio.js';
-import {mbedtls} from './misc.js'
+import {mbedtls,misc} from './misc.js'
 import system from './system.js';
 
 
@@ -202,6 +202,13 @@ Object.defineProperty(tjs,'mbedtls',{
     configurable: false,
     writable: false,
     value: mbedtls
+});
+
+Object.defineProperty(tjs,'misc',{
+    enumerable: true,
+    configurable: false,
+    writable: false,
+    value: misc
 });
 
 // Internal stuff needed by the runtime.

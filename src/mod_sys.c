@@ -179,6 +179,26 @@ static JSValue tjs__mbedtls_sha1(JSContext *ctx, JSValue this_val, int argc, JSV
     return JS_UNDEFINED;
 }
 
+static JSValue tjs_ws_fastXor(JSContext *ctx, JSValue this_val,int argc,JSValue *argv){
+    if(argc>=2){
+        uint8_t *mask;
+        size_t maskLen;
+        uint8_t *buf;
+        size_t bufLen;
+        mask=JS_GetUint8Array(ctx, &maskLen, argv[0]);
+        buf=JS_GetUint8Array(ctx, &bufLen, argv[1]);
+        if(mask==NULL || buf==NULL){
+            return JS_FALSE;
+        }
+        for(int i1=0;i1<bufLen;i1++){
+            buf[i1]=buf[i1]^mask[i1%maskLen];
+        }
+        return JS_TRUE;
+    }else{
+        return JS_FALSE;
+    }
+}
+
 
 /* clang-format off */
 static const JSCFunctionListEntry tjs_sys_funcs[] = {
@@ -190,7 +210,8 @@ static const JSCFunctionListEntry tjs_sys_funcs[] = {
     TJS_CFUNC_DEF("detachArrayBuffer", 1, tjs_detachArrayBuffer),
     TJS_CFUNC_DEF("debugprint", 1, tjs__debugprint),
     TJS_CFUNC_DEF("mbedtls_sha1", 1, tjs__mbedtls_sha1),
-    TJS_CGETSET_DEF("exePath", tjs_exepath, NULL),
+    TJS_CFUNC_DEF("__tjs_ws_fastXor", 2, tjs_ws_fastXor),
+    TJS_CGETSET_DEF("exePath", tjs_exepath, NULL)
 };
 /* clang-format on */
 

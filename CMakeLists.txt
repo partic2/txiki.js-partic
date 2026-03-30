@@ -11,7 +11,6 @@ if("${DEPS_SOURCE_DIRS}" STREQUAL "")
 endif()
 
 
-set(CURL_USE_MBEDTLS ON)
 
 if (NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type selected, default to Release")
@@ -55,6 +54,7 @@ endmacro()
 cpr_option(USE_EXTERNAL_FFI "Specify to use external ffi dependency" OFF)
 
 add_subdirectory(deps/quickjs EXCLUDE_FROM_ALL)
+add_subdirectory(deps/mbedtls EXCLUDE_FROM_ALL)
 
 if(NOT TARGET uv_a)
 add_subdirectory(${DEPS_SOURCE_DIRS}/libuv ./build_libuv EXCLUDE_FROM_ALL)
@@ -62,12 +62,8 @@ endif()
 
 
 
-add_subdirectory(deps/curl EXCLUDE_FROM_ALL)
-
 
 add_library(tjs STATIC
-    src/curl-utils.c
-    src/curl-websocket.c
     src/error.c
     src/eval.c
     src/mem.c
@@ -78,8 +74,6 @@ add_library(tjs STATIC
     src/version.c
     src/vm.c
     src/worker.c
-    src/ws.c
-    src/xhr.c
     src/mod_dns.c
     src/mod_engine.c
     src/mod_fs.c
@@ -117,7 +111,7 @@ endif()
 target_include_directories(tjs PRIVATE src)
 target_include_directories(tjs PUBLIC include)
 
-set(TJS_DEPLIBS qjs uv_a libcurl_static mbedtls)
+set(TJS_DEPLIBS qjs uv_a mbedtls)
 target_link_libraries(tjs ${TJS_DEPLIBS})
 
 add_custom_command(TARGET tjs POST_BUILD
