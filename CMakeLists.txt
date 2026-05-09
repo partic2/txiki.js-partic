@@ -91,9 +91,6 @@ add_library(ffi-test SHARED
 )
 
 
-if(NOT TARGET ffi_static)
-add_subdirectory(${DEPS_SOURCE_DIRS}/libffi ./build_libffi)
-endif()
 
 
 
