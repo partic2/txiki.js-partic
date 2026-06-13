@@ -128,7 +128,6 @@ static JSValue tjs_process_wait(JSContext *ctx, JSValue this_val, int argc, JSVa
     if (!p) {
         return JS_EXCEPTION;
     }
-    CHECK(!p->closed);
 
     if (p->status.exited) {
         JSValue obj = JS_NewObjectProto(ctx, JS_NULL);
