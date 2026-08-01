@@ -428,10 +428,10 @@ function defineEventAttribute(eventTargetPrototype, eventName) {
  */
 class EventTarget {
     constructor() {
-        this.__init();
+        this.__initTjsEventTarget();
     }
 
-    __init() {
+    __initTjsEventTarget() {
         listenersMap.set(this, new Map());
     }
 

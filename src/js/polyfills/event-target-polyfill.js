@@ -168,7 +168,7 @@ Object.defineProperties(window, {
 });
 
 Object.setPrototypeOf(window, EventTarget.prototype);
-EventTarget.prototype.__init.call(window);
+EventTarget.prototype.__initTjsEventTarget.call(window);
 
 const windowProto = Object.getPrototypeOf(window);
 
