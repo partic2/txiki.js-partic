@@ -48,6 +48,9 @@ export class Request {
         }
 
         this._initBody(body);
+        if(!body){
+            this.body=null;
+        }
 
         if (this.method === 'GET' || this.method === 'HEAD') {
             if (options.cache === 'no-store' || options.cache === 'no-cache') {
