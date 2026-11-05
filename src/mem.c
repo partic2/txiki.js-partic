@@ -24,6 +24,8 @@
 
 #include "mem.h"
 
+#include "utils.h"
+
 #include "../deps/quickjs/cutils.h"
 
 #include <stdlib.h>
@@ -33,6 +35,7 @@
 #endif
 
 size_t tjs__malloc_usable_size(const void *ptr) {
+    CHECK_NOT_NULL(ptr);
 #if defined(TJS__HAS_MIMALLOC)
     return mi_malloc_usable_size(ptr);
 #else
@@ -69,6 +72,13 @@ void tjs__free(void *ptr) {
 }
 
 void *tjs__realloc(void *ptr, size_t size) {
+    if (size == 0) {
+        tjs__free(ptr);
+        return NULL;
+    }
+    if (!ptr) {
+        return tjs__malloc(size);
+    }
 #ifdef TJS__HAS_MIMALLOC
     return mi_realloc(ptr, size);
 #else

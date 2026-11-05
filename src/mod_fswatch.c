@@ -34,10 +34,8 @@ typedef struct {
     int finalized;
 } TJSFsWatch;
 
-static JSClassID tjs_fswatch_class_id;
-
-static TJSFsWatch *tjs_fswatch_get(JSValue obj) {
-    return JS_GetOpaque(obj, tjs_fswatch_class_id);
+static TJSFsWatch *tjs_fswatch_get(JSContext *ctx, JSValue obj) {
+    return JS_GetOpaque(obj, tjs__class_id(ctx, TJS_CLASS_FSWATCH));
 }
 
 static void uv__fsevent_close_cb(uv_handle_t *handle) {
@@ -57,7 +55,7 @@ static void maybe_close(TJSFsWatch *fw) {
 }
 
 static void tjs_fswatch_finalizer(JSRuntime *rt, JSValue val) {
-    TJSFsWatch *fw = tjs_fswatch_get(val);
+    TJSFsWatch *fw = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_FSWATCH));
     if (fw) {
         JS_FreeValueRT(rt, fw->callback);
         fw->finalized = 1;
@@ -70,7 +68,7 @@ static void tjs_fswatch_finalizer(JSRuntime *rt, JSValue val) {
 }
 
 static void tjs_fswatch_mark(JSRuntime *rt, JSValue val, JS_MarkFunc *mark_func) {
-    TJSFsWatch *fw = tjs_fswatch_get(val);
+    TJSFsWatch *fw = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_FSWATCH));
     if (fw) {
         JS_MarkValue(rt, fw->callback, mark_func);
     }
@@ -83,7 +81,7 @@ static JSClassDef tjs_fswatch_class = {
 };
 
 static JSValue tjs_fswatch_close(JSContext *ctx, JSValue this_val, int argc, JSValue *argv) {
-    TJSFsWatch *fw = tjs_fswatch_get(this_val);
+    TJSFsWatch *fw = tjs_fswatch_get(ctx, this_val);
     if (!fw) {
         return JS_EXCEPTION;
     }
@@ -92,7 +90,7 @@ static JSValue tjs_fswatch_close(JSContext *ctx, JSValue this_val, int argc, JSV
 }
 
 static JSValue tjs_fswatch_path_get(JSContext *ctx, JSValue this_val) {
-    TJSFsWatch *fw = tjs_fswatch_get(this_val);
+    TJSFsWatch *fw = tjs_fswatch_get(ctx, this_val);
     if (!fw) {
         return JS_UNDEFINED;
     }
@@ -111,7 +109,7 @@ static JSValue tjs_fswatch_path_get(JSContext *ctx, JSValue this_val) {
         if (!dbuf) {
             return JS_EXCEPTION;
         }
-        uv_fs_event_getpath(&fw->handle, dbuf, &size);
+        r = uv_fs_event_getpath(&fw->handle, dbuf, &size);
         if (r != 0) {
             js_free(ctx, dbuf);
             return tjs_throw_errno(ctx, r);
@@ -172,7 +170,7 @@ static JSValue tjs_fs_watch(JSContext *ctx, JSValue this_val, int argc, JSValue 
         return JS_ThrowTypeError(ctx, "no callback function provided");
     }
 
-    JSValue obj = JS_NewObjectClass(ctx, tjs_fswatch_class_id);
+    JSValue obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_FSWATCH);
     if (JS_IsException(obj)) {
         JS_FreeCString(ctx, path);
         return JS_EXCEPTION;
@@ -197,7 +195,10 @@ static JSValue tjs_fs_watch(JSContext *ctx, JSValue this_val, int argc, JSValue 
     if (r != 0) {
         JS_FreeCString(ctx, path);
         JS_FreeValue(ctx, obj);
-        tjs__free(fw);
+        /* The handle is already in the loop. Close it and let the close callback free fw. */
+        fw->handle.data = fw;
+        fw->finalized = 1;
+        uv_close((uv_handle_t *) &fw->handle, uv__fsevent_close_cb);
         return tjs_throw_errno(ctx, r);
     }
 
@@ -224,11 +225,10 @@ static const JSCFunctionListEntry tjs_fswatch_funcs[] = {
 void tjs__mod_fswatch_init(JSContext *ctx, JSValue ns) {
     JSRuntime *rt = JS_GetRuntime(ctx);
 
-    JS_NewClassID(rt, &tjs_fswatch_class_id);
-    JS_NewClass(rt, tjs_fswatch_class_id, &tjs_fswatch_class);
+    tjs__class_register(ctx, TJS_CLASS_FSWATCH, &tjs_fswatch_class);
     JSValue proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_fswatch_proto_funcs, countof(tjs_fswatch_proto_funcs));
-    JS_SetClassProto(ctx, tjs_fswatch_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_FSWATCH, proto);
 
     JS_SetPropertyFunctionList(ctx, ns, tjs_fswatch_funcs, countof(tjs_fswatch_funcs));
 }

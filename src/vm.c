@@ -67,7 +67,8 @@ static const JSMallocFunctions tjs_mf = {
 /* SharedArrayBuffer functions */
 
 typedef struct {
-    int ref_count;
+    /* 64-bit so that buf is 8-byte aligned, as required by 8-byte typed arrays. */
+    _Atomic(int64_t) ref_count;
     uint8_t buf[0];
 } TJSSABHeader;
 
@@ -80,23 +81,26 @@ static void *tjs__sab_alloc(void *opaque, size_t size) {
     if (!sab) {
         return NULL;
     }
-    sab->ref_count = 1;
+    atomic_init(&sab->ref_count, 1);
     return sab->buf;
 }
 
+
 void tjs__sab_free(void *opaque, void *ptr) {
     TJSSABHeader *sab = (TJSSABHeader *) ((uint8_t *) ptr - sizeof(TJSSABHeader));
-    int ref_count = atomic_add_int(&sab->ref_count, -1);
-    //assert(ref_count >= 0);
+    int64_t ref_count = atomic_fetch_sub(&sab->ref_count, 1) - 1;
+    assert(ref_count >= 0);
     if (ref_count == 0) {
         tjs__free(sab);
     }
 }
 
+
 void tjs__sab_dup(void *opaque, void *ptr) {
     TJSSABHeader *sab = (TJSSABHeader *) ((uint8_t *) ptr - sizeof(TJSSABHeader));
-    atomic_add_int(&sab->ref_count, 1);
+    atomic_fetch_add(&sab->ref_count, 1);
 }
+
 
 static const JSSharedArrayBufferFunctions tjs_sf = {
     .sab_alloc = tjs__sab_alloc,
@@ -105,8 +109,16 @@ static const JSSharedArrayBufferFunctions tjs_sf = {
     .sab_opaque = NULL,
 };
 
-
-
+void tjs__class_register(JSContext *ctx, TJSClass c, const JSClassDef *def) {
+    TJSRuntime *qrt = TJS_GetRuntime(ctx);
+    CHECK_NOT_NULL(qrt);
+    CHECK(c >= 0 && c < TJS_CLASS__COUNT);
+    if (qrt->class_ids[c] == 0) {
+        JS_NewClassID(qrt->rt, &qrt->class_ids[c]);
+        int r = JS_NewClass(qrt->rt, qrt->class_ids[c], def);
+        CHECK_EQ(r, 0);
+    }
+}
 
 static int tjs__argc = 0;
 static char **tjs__argv = NULL;

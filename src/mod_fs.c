@@ -29,7 +29,6 @@
 #include <uv.h>
 
 
-static JSClassID tjs_file_class_id;
 
 typedef struct {
     JSContext *ctx;
@@ -38,7 +37,7 @@ typedef struct {
 } TJSFile;
 
 static void tjs_file_finalizer(JSRuntime *rt, JSValue val) {
-    TJSFile *f = JS_GetOpaque(val, tjs_file_class_id);
+    TJSFile *f = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_FILE));
     if (f) {
         if (f->fd != -1) {
             uv_fs_t req;
@@ -55,18 +54,17 @@ static JSClassDef tjs_file_class = {
     .finalizer = tjs_file_finalizer,
 };
 
-static JSClassID tjs_dir_class_id;
 
 typedef struct {
     JSContext *ctx;
     uv_dir_t *dir;
-    uv_dirent_t dirent;  // TODO: Use an array and an index.
     JSValue path;
     bool done;
+    bool reading;
 } TJSDir;
 
 static void tjs_dir_finalizer(JSRuntime *rt, JSValue val) {
-    TJSDir *d = JS_GetOpaque(val, tjs_dir_class_id);
+    TJSDir *d = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_DIR));
     if (d) {
         if (d->dir) {
             uv_fs_t req;
@@ -80,7 +78,6 @@ static void tjs_dir_finalizer(JSRuntime *rt, JSValue val) {
 
 static JSClassDef tjs_dir_class = { "Directory", .finalizer = tjs_dir_finalizer };
 
-static JSClassID tjs_dirent_class_id;
 
 typedef struct {
     JSValue name;
@@ -88,7 +85,7 @@ typedef struct {
 } TJSDirEnt;
 
 static void tjs_dirent_finalizer(JSRuntime *rt, JSValue val) {
-    TJSDirEnt *de = JS_GetOpaque(val, tjs_dirent_class_id);
+    TJSDirEnt *de = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_DIRENT));
     if (de) {
         JS_FreeValueRT(rt, de->name);
         js_free_rt(rt, de);
@@ -97,14 +94,13 @@ static void tjs_dirent_finalizer(JSRuntime *rt, JSValue val) {
 
 static JSClassDef tjs_dirent_class = { "DirEnt", .finalizer = tjs_dirent_finalizer };
 
-static JSClassID tjs_stat_class_id;
 
 typedef struct {
     uint64_t st_mode;
 } TJSStatResult;
 
 static void tjs_stat_finalizer(JSRuntime *rt, JSValue val) {
-    TJSStatResult *sr = JS_GetOpaque(val, tjs_stat_class_id);
+    TJSStatResult *sr = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_STAT));
     if (sr) {
         js_free_rt(rt, sr);
     }
@@ -120,6 +116,8 @@ typedef struct {
     struct {
         JSValue tarray;
     } rw;
+    /* Per-request storage so concurrent readdir requests don't share a slot. */
+    uv_dirent_t dirent;
 } TJSFsReq;
 
 typedef struct {
@@ -135,7 +133,7 @@ static JSValue tjs_new_file(JSContext *ctx, uv_file fd, const char *path) {
     TJSFile *f;
     JSValue obj;
 
-    obj = JS_NewObjectClass(ctx, tjs_file_class_id);
+    obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_FILE);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -155,14 +153,14 @@ static JSValue tjs_new_file(JSContext *ctx, uv_file fd, const char *path) {
 }
 
 static TJSFile *tjs_file_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_file_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_FILE, obj);
 }
 
 static JSValue tjs_new_dir(JSContext *ctx, uv_dir_t *dir, const char *path) {
     TJSDir *d;
     JSValue obj;
 
-    obj = JS_NewObjectClass(ctx, tjs_dir_class_id);
+    obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_DIR);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -177,17 +175,18 @@ static JSValue tjs_new_dir(JSContext *ctx, uv_dir_t *dir, const char *path) {
     d->ctx = ctx;
     d->dir = dir;
     d->done = false;
+    d->reading = false;
 
     JS_SetOpaque(obj, d);
     return obj;
 }
 
 static TJSDir *tjs_dir_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_dir_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_DIR, obj);
 }
 
 static JSValue tjs_new_dirent(JSContext *ctx, uv_dirent_t *dent) {
-    JSValue obj = JS_NewObjectClass(ctx, tjs_dirent_class_id);
+    JSValue obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_DIRENT);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -206,11 +205,11 @@ static JSValue tjs_new_dirent(JSContext *ctx, uv_dirent_t *dent) {
 }
 
 static TJSDirEnt *tjs_dirent_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_dirent_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_DIRENT, obj);
 }
 
 static JSValue tjs_new_stat(JSContext *ctx, uv_stat_t *st) {
-    JSValue obj = JS_NewObjectClass(ctx, tjs_stat_class_id);
+    JSValue obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_STAT);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -224,7 +223,7 @@ static JSValue tjs_new_stat(JSContext *ctx, uv_stat_t *st) {
     sr->st_mode = st->st_mode;
 
 #define SET_UINT64_FIELD(x)                                                                                            \
-    JS_DefinePropertyValueStr(ctx, obj, STRINGIFY(x), JS_NewUint32(ctx, st->st_##x), JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx, obj, STRINGIFY(x), JS_NewInt64(ctx, st->st_##x), JS_PROP_C_W_E);
 
     SET_UINT64_FIELD(dev);
     SET_UINT64_FIELD(mode);
@@ -256,7 +255,7 @@ static JSValue tjs_new_stat(JSContext *ctx, uv_stat_t *st) {
 }
 
 static TJSStatResult *tjs_stat_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_stat_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_STAT, obj);
 }
 
 static JSValue tjs_new_statfs(JSContext *ctx, uv_statfs_t *st) {
@@ -265,7 +264,7 @@ static JSValue tjs_new_statfs(JSContext *ctx, uv_statfs_t *st) {
         return obj;
     }
 
-#define DEF_FIELD(x) JS_DefinePropertyValueStr(ctx, obj, STRINGIFY(x), JS_NewUint32(ctx, st->f_##x), JS_PROP_C_W_E);
+#define DEF_FIELD(x) JS_DefinePropertyValueStr(ctx, obj, STRINGIFY(x), JS_NewInt64(ctx, st->f_##x), JS_PROP_C_W_E);
     DEF_FIELD(type);
     DEF_FIELD(bsize);
     DEF_FIELD(blocks);
@@ -298,6 +297,15 @@ static void uv__fs_req_cb(uv_fs_t *req) {
     TJSFile *f;
     TJSDir *d;
     bool is_reject = false;
+
+    /* Clear the reading flag on every readdir completion (success and error)
+     * so the next dir.next() can proceed. */
+    if (req->fs_type == UV_FS_READDIR) {
+        d = tjs_dir_get(ctx, fr->obj);
+        if (d) {
+            d->reading = false;
+        }
+    }
 
     if (req->result < 0) {
         arg = tjs_new_error(ctx, fr->req.result);
@@ -387,7 +395,7 @@ static void uv__fs_req_cb(uv_fs_t *req) {
             arg = JS_NewObjectProto(ctx, JS_NULL);
             JS_DefinePropertyValueStr(ctx, arg, "done", JS_NewBool(ctx, d->done), JS_PROP_C_W_E);
             if (fr->req.result != 0) {
-                JSValue item = tjs_new_dirent(ctx, &d->dirent);
+                JSValue item = tjs_new_dirent(ctx, &fr->dirent);
                 JS_DefinePropertyValueStr(ctx, arg, "value", item, JS_PROP_C_W_E);
             }
             break;
@@ -698,12 +706,17 @@ static JSValue tjs_dir_next(JSContext *ctx, JSValue this_val, int argc, JSValue 
         return JS_UNDEFINED;
     }
 
+    if (d->reading) {
+        return JS_ThrowTypeError(ctx, "directory iteration already in progress");
+    }
+
     TJSFsReq *fr = js_malloc(ctx, sizeof(*fr));
     if (!fr) {
         return JS_EXCEPTION;
     }
 
-    d->dir->dirents = &d->dirent;
+    memset(&fr->dirent, 0, sizeof(fr->dirent));
+    d->dir->dirents = &fr->dirent;
     d->dir->nentries = 1;
 
     int r = uv_fs_readdir(tjs_get_loop(ctx), &fr->req, d->dir, uv__fs_req_cb);
@@ -711,6 +724,8 @@ static JSValue tjs_dir_next(JSContext *ctx, JSValue this_val, int argc, JSValue 
         js_free(ctx, fr);
         return tjs_throw_errno(ctx, r);
     }
+
+    d->reading = true;
 
     return tjs_fsreq_init(ctx, fr, this_val);
 }
@@ -1639,32 +1654,28 @@ void tjs__mod_fs_init(JSContext *ctx, JSValue ns) {
     JSValue proto;
 
     /* File object */
-    JS_NewClassID(rt, &tjs_file_class_id);
-    JS_NewClass(rt, tjs_file_class_id, &tjs_file_class);
+    tjs__class_register(ctx, TJS_CLASS_FILE, &tjs_file_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_file_proto_funcs, countof(tjs_file_proto_funcs));
-    JS_SetClassProto(ctx, tjs_file_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_FILE, proto);
 
     /* Dir object */
-    JS_NewClassID(rt, &tjs_dir_class_id);
-    JS_NewClass(rt, tjs_dir_class_id, &tjs_dir_class);
+    tjs__class_register(ctx, TJS_CLASS_DIR, &tjs_dir_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_dir_proto_funcs, countof(tjs_dir_proto_funcs));
-    JS_SetClassProto(ctx, tjs_dir_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_DIR, proto);
 
     /* DirEnt object */
-    JS_NewClassID(rt, &tjs_dirent_class_id);
-    JS_NewClass(rt, tjs_dirent_class_id, &tjs_dirent_class);
+    tjs__class_register(ctx, TJS_CLASS_DIRENT, &tjs_dirent_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_dirent_proto_funcs, countof(tjs_dirent_proto_funcs));
-    JS_SetClassProto(ctx, tjs_dirent_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_DIRENT, proto);
 
     /* StatResult object */
-    JS_NewClassID(rt, &tjs_stat_class_id);
-    JS_NewClass(rt, tjs_stat_class_id, &tjs_stat_class);
+    tjs__class_register(ctx, TJS_CLASS_STAT, &tjs_stat_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_stat_proto_funcs, countof(tjs_stat_proto_funcs));
-    JS_SetClassProto(ctx, tjs_stat_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_STAT, proto);
 
     JS_SetPropertyFunctionList(ctx, ns, tjs_fs_funcs, countof(tjs_fs_funcs));
 }

@@ -33,6 +33,25 @@
 #include <stdbool.h>
 #include <uv.h>
 
+/* Native classes. Their JSClassIDs are allocated per runtime (TJSRuntime.class_ids),
+ * since each runtime numbers its classes independently. */
+typedef enum {
+    TJS_CLASS_FILE,
+    TJS_CLASS_DIR,
+    TJS_CLASS_DIRENT,
+    TJS_CLASS_STAT,
+    TJS_CLASS_FSWATCH,
+    TJS_CLASS_PROCESS,
+    TJS_CLASS_TCP,
+    TJS_CLASS_TTY,
+    TJS_CLASS_PIPE,
+    TJS_CLASS_UDP,
+    TJS_CLASS_SIGNAL_HANDLER,
+    TJS_CLASS_WORKER,
+    TJS_CLASS_MSG_PIPE,
+    TJS_CLASS__COUNT
+} TJSClass;
+
 typedef struct TJSTimer TJSTimer;
 
 struct TJSRuntime {
@@ -55,7 +74,25 @@ struct TJSRuntime {
     struct {
         JSValue tjs_core_on_message;
     } builtins;
+    JSClassID class_ids[TJS_CLASS__COUNT];
 };
+
+static inline JSClassID tjs__class_id(JSContext *ctx, TJSClass c) {
+    TJSRuntime *qrt = TJS_GetRuntime(ctx);
+    CHECK_NOT_NULL(qrt);
+    return qrt->class_ids[c];
+}
+
+static inline JSClassID tjs__class_id_rt(JSRuntime *rt, TJSClass c) {
+    return (JSClassID) ((TJSRuntime *) JS_GetRuntimeOpaque(rt))->class_ids[c];
+}
+
+/* Convenience macros for class ID operations. */
+#define JS_GET_OPAQUE(tjs_class_enum, obj) JS_GetOpaque2(ctx, obj, tjs__class_id(ctx, tjs_class_enum))
+#define JS_NEW_OBJECT_CLASS(tjs_class_enum) JS_NewObjectClass(ctx, tjs__class_id(ctx, tjs_class_enum))
+#define JS_SET_CLASS_PROTO(tjs_class_enum, proto) JS_SetClassProto(ctx, tjs__class_id(ctx, tjs_class_enum), proto)
+
+void tjs__class_register(JSContext *ctx, TJSClass c, const JSClassDef *def);
 
 void tjs__mod_dns_init(JSContext *ctx, JSValue ns);
 void tjs__mod_error_init(JSContext *ctx, JSValue ns);

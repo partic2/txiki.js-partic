@@ -51,6 +51,8 @@ static void destroy_timer(TJSTimer *th) {
     TJSRuntime *qrt = JS_GetContextOpaque(ctx);
     CHECK_NOT_NULL(qrt);
 
+    CHECK(!uv_is_closing((uv_handle_t *) &th->handle));
+
     JS_FreeValue(ctx, th->func);
     th->func = JS_UNDEFINED;
 
@@ -80,7 +82,16 @@ static void uv__timer_cb(uv_timer_t *handle) {
     /* Micro-tasks should run before timers. */
     tjs__execute_jobs(th->ctx);
 
+    /* It's possible our timer was scheduled to run but was destroyed by another one. */
+    if (uv_is_closing((uv_handle_t *) handle)) {
+        return;
+    }
+
     tjs_call_handler(th->ctx, th->func, th->argc, th->argv);
+
+    if (uv_is_closing((uv_handle_t *) handle)) {
+        return;
+    }
 
     if (!th->interval) {
         destroy_timer(th);

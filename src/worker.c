@@ -39,8 +39,6 @@ enum {
     MSGPIPE_EVENT_MAX,
 };
 
-static JSClassID tjs_msgpipe_class_id;
-
 typedef struct {
     JSContext *ctx;
     union {
@@ -75,7 +73,7 @@ static void uv__close_cb(uv_handle_t *handle) {
 }
 
 static void tjs_msgpipe_finalizer(JSRuntime *rt, JSValue val) {
-    TJSMessagePipe *p = JS_GetOpaque(val, tjs_msgpipe_class_id);
+    TJSMessagePipe *p = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_MSG_PIPE));
     if (p) {
         for (int i = 0; i < MSGPIPE_EVENT_MAX; i++) {
             JS_FreeValueRT(rt, p->events[i]);
@@ -85,7 +83,7 @@ static void tjs_msgpipe_finalizer(JSRuntime *rt, JSValue val) {
 }
 
 static void tjs_msgpipe_mark(JSRuntime *rt, JSValue val, JS_MarkFunc *mark_func) {
-    TJSMessagePipe *p = JS_GetOpaque(val, tjs_msgpipe_class_id);
+    TJSMessagePipe *p = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_MSG_PIPE));
     if (p) {
         for (int i = 0; i < MSGPIPE_EVENT_MAX; i++) {
             JS_MarkValue(rt, p->events[i], mark_func);
@@ -100,7 +98,7 @@ static JSClassDef tjs_msgpipe_class = {
 };
 
 static TJSMessagePipe *tjs_msgpipe_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_msgpipe_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_MSG_PIPE, obj);
 }
 
 static JSValue emit_event(JSContext *ctx, int argc, JSValue *argv) {
@@ -212,7 +210,7 @@ static void uv__read_cb(uv_stream_t *handle, ssize_t nread, const uv_buf_t *buf)
 }
 
 static JSValue tjs_new_msgpipe(JSContext *ctx, uv_os_sock_t fd) {
-    JSValue obj = JS_NewObjectClass(ctx, tjs_msgpipe_class_id);
+    JSValue obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_MSG_PIPE);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -326,8 +324,6 @@ static const JSCFunctionListEntry tjs_msgpipe_proto_funcs[] = {
 
 static JSValue tjs_new_worker(JSContext *ctx, uv_os_sock_t channel_fd);
 
-static JSClassID tjs_worker_class_id;
-
 typedef struct {
     const char *specifier;
     const char *source;
@@ -433,14 +429,14 @@ static void worker_entry(void *arg) {
 }
 
 static void tjs_worker_finalizer(JSRuntime *rt, JSValue val) {
-    TJSWorker *w = JS_GetOpaque(val, tjs_worker_class_id);
+    TJSWorker *w = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_WORKER));
     if (w) {
         JS_FreeValueRT(rt, w->message_pipe);
     }
 }
 
 static void tjs_worker_mark(JSRuntime *rt, JSValue val, JS_MarkFunc *mark_func) {
-    TJSWorker *w = JS_GetOpaque(val, tjs_worker_class_id);
+    TJSWorker *w = JS_GetOpaque(val, tjs__class_id_rt(rt, TJS_CLASS_WORKER));
     if (w) {
         JS_MarkValue(rt, w->message_pipe, mark_func);
     }
@@ -453,11 +449,11 @@ static JSClassDef tjs_worker_class = {
 };
 
 static TJSWorker *tjs_worker_get(JSContext *ctx, JSValue obj) {
-    return JS_GetOpaque2(ctx, obj, tjs_worker_class_id);
+    return JS_GET_OPAQUE(TJS_CLASS_WORKER, obj);
 }
 
 static JSValue tjs_new_worker(JSContext *ctx, uv_os_sock_t channel_fd) {
-    JSValue obj = JS_NewObjectClass(ctx, tjs_worker_class_id);
+    JSValue obj = JS_NEW_OBJECT_CLASS(TJS_CLASS_WORKER);
     if (JS_IsException(obj)) {
         return obj;
     }
@@ -566,20 +562,18 @@ void tjs__mod_worker_init(JSContext *ctx, JSValue ns) {
     JSValue proto, obj;
 
     /* Worker class */
-    JS_NewClassID(rt, &tjs_worker_class_id);
-    JS_NewClass(rt, tjs_worker_class_id, &tjs_worker_class);
+    tjs__class_register(ctx, TJS_CLASS_WORKER, &tjs_worker_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_worker_proto_funcs, countof(tjs_worker_proto_funcs));
-    JS_SetClassProto(ctx, tjs_worker_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_WORKER, proto);
 
     /* Worker object */
     obj = JS_NewCFunction2(ctx, tjs_worker_constructor, "Worker", 2, JS_CFUNC_constructor, 0);
     JS_DefinePropertyValueStr(ctx, ns, "Worker", obj, JS_PROP_C_W_E);
 
     /* MessagePipe class */
-    JS_NewClassID(rt, &tjs_msgpipe_class_id);
-    JS_NewClass(rt, tjs_msgpipe_class_id, &tjs_msgpipe_class);
+    tjs__class_register(ctx, TJS_CLASS_MSG_PIPE, &tjs_msgpipe_class);
     proto = JS_NewObject(ctx);
     JS_SetPropertyFunctionList(ctx, proto, tjs_msgpipe_proto_funcs, countof(tjs_msgpipe_proto_funcs));
-    JS_SetClassProto(ctx, tjs_msgpipe_class_id, proto);
+    JS_SET_CLASS_PROTO(TJS_CLASS_MSG_PIPE, proto);
 }
